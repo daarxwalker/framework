@@ -6,8 +6,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/iancoleman/strcase"
-
-	"dd"
 )
 
 type Router struct {
@@ -64,7 +62,6 @@ func (r *Router) buildRoute(controller *appController, methodName string, method
 	}
 	route.method = method
 	r.fiber.Get(route.path, func(ctx *fiber.Ctx) error {
-		dd.Print("GET: ", ctx)
 		l := newRouteLifecycle(r.app, controller, route, ctx)
 		l.run()
 		return r.buildResponse(ctx, l.routeControl.response)
@@ -77,7 +74,6 @@ func (r *Router) buildActions(controller *appController, methodName string) {
 		return
 	}
 	r.fiber.Post(route.path, func(ctx *fiber.Ctx) error {
-		dd.Print("POST: ", ctx)
 		l := newActionLifecycle(r.app, controller, ctx)
 		l.run()
 		return r.buildResponse(ctx, l.actionControl.response)
