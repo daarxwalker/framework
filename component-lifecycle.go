@@ -18,10 +18,10 @@ type componentLifecycle struct {
 }
 
 const (
-	componentInitMethod     = "Init"
-	componentHandleMethod   = "Handle"
-	componentCreateMethod   = "Create"
-	componentTemplateMethod = "Template"
+	componentInitMethod   = "Init"
+	componentHandleMethod = "Handle"
+	componentCreateMethod = "Create"
+	componentRenderMethod = "Render"
 )
 
 func newComponentLifecycle(control *control, c reflect.Value, ct reflect.Type, name string, namespace *namespace) *componentLifecycle {
@@ -39,7 +39,7 @@ func (l *componentLifecycle) run() *componentLifecycle {
 	l.createActions()
 	l.runInitMethod()
 	l.runCreateMethods()
-	l.runTemplateMethod()
+	l.runRenderMethod()
 	return l
 }
 
@@ -63,12 +63,12 @@ func (l *componentLifecycle) runCreateMethods() {
 	}
 }
 
-func (l *componentLifecycle) runTemplateMethod() {
-	templateMethod := l.component.MethodByName(componentTemplateMethod)
-	if !templateMethod.IsValid() {
+func (l *componentLifecycle) runRenderMethod() {
+	renderMethod := l.component.MethodByName(componentRenderMethod)
+	if !renderMethod.IsValid() {
 		return
 	}
-	result := templateMethod.Call([]reflect.Value{})
+	result := renderMethod.Call([]reflect.Value{})
 	if len(result) == 0 {
 		return
 	}

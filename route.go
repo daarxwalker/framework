@@ -7,6 +7,8 @@ type Route struct {
 	controllerName   string
 	controllerMethod string
 	method           reflect.Value
+	module           string
+	isModule         bool
 }
 
 func (r *Route) Controller(name string) *Route {

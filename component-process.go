@@ -7,7 +7,6 @@ import (
 
 type componentProcess struct {
 	control       *control
-	actionControl *actionControl
 	namespace     *namespace
 	component     reflect.Value
 	typeComponent reflect.StructField
@@ -38,7 +37,6 @@ func (cp *componentProcess) runActionComponentProcess() {
 		return
 	}
 	newComponentLifecycle(cp.control, cp.component, cp.typeComponent.Type, cp.getFullname(), cp.namespace.clone()).run()
-	cp.createActionControl()
 	cp.setActionMethod()
 }
 
@@ -49,14 +47,6 @@ func (cp *componentProcess) runRouteComponentProcess() {
 func (cp *componentProcess) setActionMethod() {
 	methodName := cp.actionPath[len(cp.actionPath)-1]
 	cp.actionMethod = cp.component.MethodByName(methodName)
-}
-
-func (cp *componentProcess) createActionControl() {
-	componentField := cp.component.Elem().FieldByName(componentType.Name())
-	if !componentField.IsValid() {
-		return
-	}
-	cp.component.Elem().FieldByName(componentType.Name()).Elem().FieldByName(componentActionFieldKey).Set(reflect.ValueOf(cp.actionControl))
 }
 
 func (cp *componentProcess) createNamespace() {

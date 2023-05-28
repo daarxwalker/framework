@@ -1,12 +1,7 @@
 package framework
 
 type Component struct {
-	control  *control
-	Action   *actionControl
+	Control  ComponentControl
 	Handle   map[string]string
 	Template string
 }
-
-const (
-	componentActionFieldKey = "Action"
-)

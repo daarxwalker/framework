@@ -67,12 +67,12 @@ func (i *injector) createNewInstance(dst reflect.Value) {
 }
 
 func (i *injector) injectController(dst reflect.Value) {
-	dst.Set(reflect.ValueOf(&Controller{control: i.control}))
+	dst.Set(reflect.ValueOf(&Controller{Control: i.control}))
 }
 
 func (i *injector) injectComponent(dst reflect.Value) {
 	c := &Component{
-		control: i.control,
+		Control: i.control,
 		Handle:  make(map[string]string),
 	}
 	dst.Elem().FieldByName(componentType.Name()).Set(

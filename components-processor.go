@@ -8,7 +8,6 @@ import (
 
 type componentsProcessor struct {
 	control        *control
-	actionControl  *actionControl
 	namespace      *namespace
 	targetValue    reflect.Value
 	targetType     reflect.Type
@@ -38,10 +37,9 @@ func newComponentsProcessor(control *control, targetValue reflect.Value, targetT
 	return cp
 }
 
-func (cp *componentsProcessor) action(actionControl *actionControl, path []string) {
+func (cp *componentsProcessor) action(path []string) {
 	cp.processType = processAction
 	cp.actionPath = path
-	cp.actionControl = actionControl
 }
 
 func (cp *componentsProcessor) route() {
@@ -61,7 +59,6 @@ func (cp *componentsProcessor) processComponents(targetValue reflect.Value,
 	for index := 0; index < fieldsLen; index++ {
 		p := &componentProcess{
 			control:       cp.control,
-			actionControl: cp.actionControl,
 			processType:   cp.processType,
 			actionPath:    cp.actionPath,
 			namespace:     namespace.clone(),
@@ -76,7 +73,6 @@ func (cp *componentsProcessor) processComponents(targetValue reflect.Value,
 		cp.updateResult(p.component)
 		if cp.processType == processAction && p.actionMethod.IsValid() {
 			cp.actionMethod = p.actionMethod
-			break
 		}
 		cp.processComponents(p.component, p.typeComponent.Type, p.namespace.clone())
 	}

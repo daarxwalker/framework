@@ -1,8 +1,6 @@
 package framework
 
-type appController struct {
+type appModule struct {
 	provider *reflectProvider
 	name     string
-	isModule bool
-	module   string
 }

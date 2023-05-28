@@ -11,6 +11,7 @@ import (
 )
 
 type templateManager struct {
+	app        *App
 	partials   map[string]string
 	layouts    map[string]*raymond.Template
 	components map[string]*raymond.Template
@@ -38,8 +39,9 @@ var (
 	templateRouteSuffix     = "." + templateRoute + templateFileTypeSuffix
 )
 
-func newTemplateManager() *templateManager {
+func newTemplateManager(app *App) *templateManager {
 	return &templateManager{
+		app:        app,
 		partials:   make(map[string]string),
 		layouts:    make(map[string]*raymond.Template),
 		components: make(map[string]*raymond.Template),
@@ -161,5 +163,12 @@ func (t *templateManager) registerHelpers() {
 	})
 	raymond.RegisterHelper("form", func(action string, options *raymond.Options) raymond.SafeString {
 		return raymond.SafeString(fmt.Sprintf(`<form action="%s" method="post">%s</form>`, action, options.Fn()))
+	})
+	raymond.RegisterHelper("link", func(key string, options *raymond.Options) raymond.SafeString {
+		link, ok := t.app.linksManager.links[key]
+		if !ok {
+			return ""
+		}
+		return raymond.SafeString(link)
 	})
 }

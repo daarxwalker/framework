@@ -1,7 +1,6 @@
 package framework
 
 import (
-	"reflect"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,10 +8,17 @@ import (
 )
 
 type Router struct {
-	app    *App
-	fiber  *fiber.App
-	routes []*Route
+	app        *App
+	fiber      *fiber.App
+	routes     []*Route
+	module     bool
+	moduleName string
 }
+
+const (
+	controllerRenderMethodPrefix = "Render"
+	controllerDefaultRouteName   = "default"
+)
 
 func newRouter(app *App) *Router {
 	return &Router{
@@ -24,12 +30,16 @@ func newRouter(app *App) *Router {
 }
 
 func (r *Router) Add(path string) *Route {
-	rr := &Route{path: path}
+	rr := &Route{path: path, module: r.moduleName, isModule: len(r.moduleName) > 0}
 	r.routes = append(r.routes, rr)
 	return rr
 }
 
 func (r *Router) build() {
+	r.buildControllers()
+}
+
+func (r *Router) buildControllers() {
 	for controllerName, controller := range r.app.controllers {
 		ct := controller.provider.reflectType
 		cv := controller.provider.reflectValue
@@ -46,37 +56,37 @@ func (r *Router) build() {
 		}
 		for index := 0; index < methodsLen; index++ {
 			methodName := ct.Method(index).Name
-			method := cv.Method(index)
-			if strings.HasSuffix(methodName, "Route") {
-				r.buildRoute(controller, methodName, method)
+			if strings.HasPrefix(methodName, controllerRenderMethodPrefix) {
+				r.buildRoute(controller, methodName)
 				r.buildActions(controller, methodName)
 			}
 		}
 	}
 }
 
-func (r *Router) buildRoute(controller *appController, methodName string, method reflect.Value) {
-	route := r.getRoute(methodName)
+func (r *Router) buildRoute(controller *appController, renderMethodName string) {
+	route := r.getRoute(renderMethodName)
 	if route == nil {
 		return
 	}
-	route.method = method
 	r.fiber.Get(route.path, func(ctx *fiber.Ctx) error {
-		l := newRouteLifecycle(r.app, controller, route, ctx)
+		l := newLifecycle(r.app, controller, ctx, renderMethodName)
+		l.route()
 		l.run()
-		return r.buildResponse(ctx, l.routeControl.response)
+		return r.buildResponse(ctx, l.control.response)
 	})
 }
 
-func (r *Router) buildActions(controller *appController, methodName string) {
-	route := r.getRoute(methodName)
+func (r *Router) buildActions(controller *appController, renderMethodName string) {
+	route := r.getRoute(renderMethodName)
 	if route == nil {
 		return
 	}
 	r.fiber.Post(route.path, func(ctx *fiber.Ctx) error {
-		l := newActionLifecycle(r.app, controller, ctx)
+		l := newLifecycle(r.app, controller, ctx, renderMethodName)
+		l.action()
 		l.run()
-		return r.buildResponse(ctx, l.actionControl.response)
+		return r.buildResponse(ctx, l.control.response)
 	})
 }
 
@@ -100,7 +110,10 @@ func (r *Router) buildResponse(ctx *fiber.Ctx, response *response) error {
 }
 
 func (r *Router) getRoute(methodName string) *Route {
-	routeName := strcase.ToLowerCamel(strings.Replace(methodName, "Route", "", -1))
+	routeName := controllerDefaultRouteName
+	if len(methodName) > len(controllerRenderMethodPrefix) {
+		routeName = strcase.ToLowerCamel(strings.Replace(methodName, controllerRenderMethodPrefix, "", -1))
+	}
 	var resolvedRoute *Route
 	for _, route := range r.routes {
 		if route.controllerMethod != routeName {
