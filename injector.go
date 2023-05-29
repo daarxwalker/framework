@@ -3,6 +3,8 @@ package framework
 import (
 	"log"
 	"reflect"
+
+	"github.com/iancoleman/strcase"
 )
 
 type injector struct {
@@ -31,7 +33,7 @@ func (i *injector) setService(service any, config *ServiceConfig) {
 	}
 }
 
-func (i *injector) autoinject(dst reflect.Value) {
+func (i *injector) autoinject(dst reflect.Value, dstType ...reflect.Type) {
 	if dst.Kind() == reflect.Ptr {
 		dst = dst.Elem()
 	}
@@ -51,7 +53,12 @@ func (i *injector) autoinject(dst reflect.Value) {
 			i.createNewInstance(field)
 		}
 		if field.Elem().FieldByName(componentType.Name()).IsValid() {
-			i.injectComponent(field)
+			if len(dstType) > 0 {
+				i.injectComponent(field, dstType[0].Elem().Field(index))
+			}
+			if len(dstType) == 0 {
+				i.injectComponent(field, reflect.StructField{})
+			}
 		}
 		if field.Elem().FieldByName(serviceType.Name()).IsValid() {
 			i.injectService(field)
@@ -70,10 +77,12 @@ func (i *injector) injectController(dst reflect.Value) {
 	dst.Set(reflect.ValueOf(&Controller{Control: i.control}))
 }
 
-func (i *injector) injectComponent(dst reflect.Value) {
+func (i *injector) injectComponent(dst reflect.Value, dstType reflect.StructField) {
 	c := &Component{
 		Control: i.control,
+		control: i.control,
 		Handle:  make(map[string]string),
+		name:    strcase.ToKebab(dstType.Name),
 	}
 	dst.Elem().FieldByName(componentType.Name()).Set(
 		reflect.ValueOf(c),

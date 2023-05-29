@@ -13,7 +13,7 @@ import (
 type renderManager struct {
 	app         *App
 	controller  *appController
-	template    string
+	template    templatePath
 	renderType  string
 	error       error
 	html        string
@@ -26,7 +26,7 @@ const (
 	slotTag = "<slot/>"
 )
 
-func newRenderManager(app *App, controller *appController, template, renderType string, components map[string]reflect.Value) *renderManager {
+func newRenderManager(app *App, controller *appController, template templatePath, renderType string, components map[string]reflect.Value) *renderManager {
 	return &renderManager{
 		app:         app,
 		controller:  controller,
@@ -51,7 +51,7 @@ func (m *renderManager) renderTemplate() {
 	layouts := m.getLayouts()
 	tmpl, ok := m.getTemplates()[m.getTemplateKey()]
 	if !ok {
-		m.error = errors.New(fmt.Sprintf("%s template [%s/%s] not found.", m.renderType, m.controller.name, m.template))
+		m.error = errors.New(fmt.Sprintf("%s template [%s/%s] not found.", m.renderType, m.controller.name, m.template.path))
 		return
 	}
 	if len(m.layout) == 0 {
@@ -72,9 +72,9 @@ func (m *renderManager) renderTemplate() {
 func (m *renderManager) renderComponents() {
 	for name, component := range m.components {
 		bc := component.Elem().FieldByName(componentType.Name()).Interface().(*Component)
-		tmpl, ok := m.app.templateManager.components[bc.Template]
+		tmpl, ok := m.app.templatesManager.components[bc.template.buildPath()]
 		if !ok {
-			m.error = errors.New(fmt.Sprintf("component template [%s/%s] not found.", m.controller.name, m.template))
+			m.error = errors.New(fmt.Sprintf("component template [%s/%s] not found.", m.controller.name, m.template.path))
 			return
 		}
 		m.contextData[name] = func(options *raymond.Options) raymond.SafeString {
@@ -107,26 +107,29 @@ func (m *renderManager) overrideComponentParams(hash map[string]any, component r
 }
 
 func (m *renderManager) getTemplateKey() string {
-	return fmt.Sprintf("%s:%s", m.controller.name, m.template)
+	if m.template.sourceType != templateSourceModule && m.template.sourceType != templateSourceController {
+		return fmt.Sprintf("%s:%s", m.template.namespace, m.template.path)
+	}
+	return fmt.Sprintf("%s:%s:%s", m.template.sourceType, m.template.namespace, m.template.path)
 }
 
 func (m *renderManager) getTemplates() map[string]*raymond.Template {
 	switch m.renderType {
 	case templateComponent:
-		return m.app.templateManager.components
+		return m.app.templatesManager.components
 	case templateRoute:
-		return m.app.templateManager.routes
+		return m.app.templatesManager.routes
 	default:
 		return make(map[string]*raymond.Template)
 	}
 }
 
 func (m *renderManager) getPartials() map[string]string {
-	return m.app.templateManager.partials
+	return m.app.templatesManager.partials
 }
 
 func (m *renderManager) getLayouts() map[string]*raymond.Template {
-	return m.app.templateManager.layouts
+	return m.app.templatesManager.layouts
 }
 
 func (m *renderManager) isOk() bool {

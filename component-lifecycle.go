@@ -68,15 +68,7 @@ func (l *componentLifecycle) runRenderMethod() {
 	if !renderMethod.IsValid() {
 		return
 	}
-	result := renderMethod.Call([]reflect.Value{})
-	if len(result) == 0 {
-		return
-	}
-	if len(l.name) == 0 {
-		l.baseComponent.Template = result[0].String()
-		return
-	}
-	l.baseComponent.Template = l.name + ":" + result[0].String()
+	renderMethod.Call([]reflect.Value{})
 }
 
 func (l *componentLifecycle) createActions() {

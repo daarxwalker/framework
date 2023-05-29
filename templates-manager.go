@@ -10,8 +10,14 @@ import (
 	"github.com/mailgun/raymond/v2"
 )
 
-type templateManager struct {
+type TemplatesManager interface {
+	GlobalPath(path string)
+}
+
+type templatesManager struct {
 	app        *App
+	globalPath string
+	root       string
 	partials   map[string]string
 	layouts    map[string]*raymond.Template
 	components map[string]*raymond.Template
@@ -21,7 +27,7 @@ type templateManager struct {
 const (
 	templateControllerPathSuffix = "_controller"
 	templateComponentPathSuffix  = "_component"
-	templateDomainPathSuffix     = "_domain"
+	templateModulePathSuffix     = "_module"
 	templateFileTypeSuffix       = ".hbs"
 )
 
@@ -30,6 +36,7 @@ var (
 	templateLayout    = "layout"
 	templatePartial   = "partial"
 	templateRoute     = "route"
+	templateGlobal    = "global"
 )
 
 var (
@@ -39,24 +46,29 @@ var (
 	templateRouteSuffix     = "." + templateRoute + templateFileTypeSuffix
 )
 
-func newTemplateManager(app *App) *templateManager {
-	return &templateManager{
+func newTemplatesManager(app *App) *templatesManager {
+	return &templatesManager{
 		app:        app,
 		partials:   make(map[string]string),
 		layouts:    make(map[string]*raymond.Template),
 		components: make(map[string]*raymond.Template),
 		routes:     make(map[string]*raymond.Template),
+		root:       root(),
 	}
 }
 
-func (t *templateManager) parse() {
-	t.registerHelpers()
-	t.parseTemplates(domainRootDir)
-	t.parseTemplates(templateRootDir)
+func (t *templatesManager) GlobalPath(path string) {
+	t.globalPath = path
 }
 
-func (t *templateManager) parseTemplates(dir string) {
-	check(filepath.Walk(root()+dir, func(path string, info fs.FileInfo, err error) error {
+func (t *templatesManager) parse() {
+	t.registerHelpers()
+	t.parseTemplates(moduleRootDir)
+	t.parseTemplates(t.globalPath)
+}
+
+func (t *templatesManager) parseTemplates(dir string) {
+	check(filepath.Walk(t.root+dir, func(path string, info fs.FileInfo, err error) error {
 		if !strings.HasSuffix(path, templateFileTypeSuffix) {
 			return nil
 		}
@@ -74,7 +86,7 @@ func (t *templateManager) parseTemplates(dir string) {
 	}))
 }
 
-func (t *templateManager) parseTemplate(path, templateType string) {
+func (t *templatesManager) parseTemplate(path, templateType string) {
 	content, err := os.ReadFile(path)
 	check(err)
 	if templateType == templatePartial {
@@ -93,10 +105,10 @@ func (t *templateManager) parseTemplate(path, templateType string) {
 	}
 }
 
-func (t *templateManager) getTemplateKey(path, templateType string) string {
+func (t *templatesManager) getTemplateKey(path, templateType string) string {
 	var namespace, name string
 	// Namespace
-	isDomainChild := strings.Contains(path, templateDomainPathSuffix)
+	isModuleChild := strings.Contains(path, templateModulePathSuffix)
 	isControllerChild := strings.Contains(path, templateControllerPathSuffix)
 	isComponentChild := strings.Contains(path, templateComponentPathSuffix)
 	if isControllerChild {
@@ -105,8 +117,8 @@ func (t *templateManager) getTemplateKey(path, templateType string) string {
 	if isComponentChild {
 		namespace = t.getComponentName(path)
 	}
-	if isDomainChild && !isControllerChild && !isComponentChild {
-		namespace = t.getDomainName(path)
+	if isModuleChild && !isControllerChild && !isComponentChild {
+		namespace = t.getModuleName(path)
 	}
 	// Name
 	pathParts := strings.Split(path, "/")
@@ -122,12 +134,22 @@ func (t *templateManager) getTemplateKey(path, templateType string) string {
 		name = strings.TrimSuffix(name, templateRouteSuffix)
 	}
 	if len(namespace) == 0 {
-		return name
+		return fmt.Sprintf("%s:%s", templateGlobal, name)
 	}
-	return fmt.Sprintf("%s:%s", namespace, name)
+	key := fmt.Sprintf("%s:%s", namespace, name)
+	if templateType != templateRoute {
+		return key
+	}
+	if isModuleChild && !isControllerChild {
+		key = templateSourceModule + templatePathSeparator + key
+	}
+	if isControllerChild {
+		key = templateSourceController + templatePathSeparator + key
+	}
+	return key
 }
 
-func (t *templateManager) getControllerName(path string) (result string) {
+func (t *templatesManager) getControllerName(path string) (result string) {
 	parts := strings.Split(path, "/")
 	for _, part := range parts {
 		if strings.HasSuffix(part, templateControllerPathSuffix) {
@@ -137,7 +159,7 @@ func (t *templateManager) getControllerName(path string) (result string) {
 	return result
 }
 
-func (t *templateManager) getComponentName(path string) (result string) {
+func (t *templatesManager) getComponentName(path string) (result string) {
 	parts := strings.Split(path, "/")
 	for _, part := range parts {
 		if strings.HasSuffix(part, templateComponentPathSuffix) {
@@ -147,17 +169,17 @@ func (t *templateManager) getComponentName(path string) (result string) {
 	return result
 }
 
-func (t *templateManager) getDomainName(path string) (result string) {
+func (t *templatesManager) getModuleName(path string) (result string) {
 	parts := strings.Split(path, "/")
 	for _, part := range parts {
-		if strings.HasSuffix(part, templateDomainPathSuffix) {
-			return strings.TrimSuffix(part, templateDomainPathSuffix)
+		if strings.HasSuffix(part, templateModulePathSuffix) {
+			return strings.TrimSuffix(part, templateModulePathSuffix)
 		}
 	}
 	return result
 }
 
-func (t *templateManager) registerHelpers() {
+func (t *templatesManager) registerHelpers() {
 	raymond.RegisterHelper("slot", func(options *raymond.Options) raymond.SafeString {
 		return slotTag
 	})

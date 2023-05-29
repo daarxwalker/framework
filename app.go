@@ -11,14 +11,14 @@ import (
 )
 
 type App struct {
-	config          *Config
-	controllers     map[string]*appController
-	router          *Router
-	moduleBuilder   *moduleBuilder
-	templateManager *templateManager
-	linksManager    *linksManager
-	modules         map[string]*appModule
-	services        map[string]*appService
+	config           *Config
+	controllers      map[string]*appController
+	router           *Router
+	moduleBuilder    *moduleBuilder
+	templatesManager *templatesManager
+	linksManager     *linksManager
+	modules          map[string]*appModule
+	services         map[string]*appService
 }
 
 const (
@@ -37,11 +37,15 @@ func New(config ...*Config) *App {
 		modules:     make(map[string]*appModule),
 		services:    make(map[string]*appService),
 	}
-	app.templateManager = newTemplateManager(app)
+	app.templatesManager = newTemplatesManager(app)
 	app.router = newRouter(app)
 	app.moduleBuilder = newModuleBuilder(app)
 	app.linksManager = newLinksManager(app)
 	return app
+}
+
+func (a *App) Templates() TemplatesManager {
+	return a.templatesManager
 }
 
 func (a *App) Module(module any) *App {
@@ -114,7 +118,7 @@ func (a *App) Fly() {
 }
 
 func (a *App) beforeFly() {
-	a.templateManager.parse()
+	a.templatesManager.parse()
 	a.moduleBuilder.build()
 	a.router.build()
 	a.linksManager.build()

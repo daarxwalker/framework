@@ -5,12 +5,19 @@ type response struct {
 	bytes        []byte
 	json         any
 	text         string
-	template     string
+	template     templatePath
 	html         string
 	error        error
 	status       int
 	redirect     string
 }
+
+const (
+	responseText     = "text"
+	responseTemplate = "template"
+	responseJson     = "json"
+	responseRedirect = "redirect"
+)
 
 func (r *response) setType(responseType string) *response {
 	r.responseType = responseType

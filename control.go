@@ -4,12 +4,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type BaseControl interface {
+	Root() string
+}
+
 type ComponentControl interface {
+	BaseControl
 	Form(form *Form)
 	Redirect(path string)
 }
 
 type RouteControl interface {
+	BaseControl
 	Text(value string)
 	Template(template string)
 	JSON(value any)
@@ -17,6 +23,7 @@ type RouteControl interface {
 }
 
 type ControllerControl interface {
+	BaseControl
 	Text(value string)
 	Template(template string)
 	JSON(value any)
@@ -27,14 +34,20 @@ type control struct {
 	ctx        *fiber.Ctx
 	response   *response
 	controller *appController
+	module     string
 }
 
-func newControl(ctx *fiber.Ctx) *control {
+func newControl(ctx *fiber.Ctx, controller *appController, module string) *control {
 	return &control{
 		ctx:        ctx,
 		response:   new(response),
-		controller: new(appController),
+		controller: controller,
+		module:     module,
 	}
+}
+
+func (c *control) Root() string {
+	return root()
 }
 
 func (c *control) Path() string {
@@ -48,10 +61,10 @@ func (c *control) Text(value string) {
 	}
 }
 
-func (c *control) Template(template string) {
+func (c *control) Template(path string) {
 	c.response = &response{
 		responseType: responseTemplate,
-		template:     template,
+		template:     newTemplatePath(path, templateSourceController, c.controller.name),
 	}
 }
 

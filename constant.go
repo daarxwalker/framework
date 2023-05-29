@@ -3,6 +3,6 @@ package framework
 const (
 	env = "APP_ENV"
 
-	domainRootDir   = "/app/domain"
+	moduleRootDir   = "/app/module"
 	templateRootDir = "/app/template"
 )

@@ -16,6 +16,7 @@ type lifecycle struct {
 	ctx                *fiber.Ctx
 	templateComponents map[string]reflect.Value
 	renderMethodName   string
+	module             string
 	lifecycleType      string
 	actionName         string
 	actionMethod       reflect.Value
@@ -27,10 +28,11 @@ const (
 	queryAction     = "action"
 )
 
-func newLifecycle(app *App, controller *appController, ctx *fiber.Ctx, renderMethodName string) *lifecycle {
+func newLifecycle(app *App, controller *appController, ctx *fiber.Ctx, renderMethodName, module string) *lifecycle {
 	l := &lifecycle{
 		app:                app,
 		renderMethodName:   renderMethodName,
+		module:             module,
 		ctx:                ctx,
 		actionName:         ctx.Query(queryAction, ""),
 		templateComponents: make(map[string]reflect.Value),
@@ -56,7 +58,7 @@ func (l *lifecycle) run() {
 
 func (l *lifecycle) autoinject() {
 	l.injector = newInjector(l.app, l.control)
-	l.injector.autoinject(l.controller.provider.reflectValue)
+	l.injector.autoinject(l.controller.provider.reflectValue, l.controller.provider.reflectType)
 }
 
 func (l *lifecycle) createNamespace() {
@@ -65,7 +67,7 @@ func (l *lifecycle) createNamespace() {
 }
 
 func (l *lifecycle) createControl() {
-	l.control = newControl(l.ctx)
+	l.control = newControl(l.ctx, l.controller, l.module)
 }
 
 func (l *lifecycle) callRenderMethod() {
