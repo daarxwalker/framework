@@ -19,6 +19,8 @@ type App struct {
 	linksManager     *linksManager
 	modules          map[string]*appModule
 	services         map[string]*appService
+	languages        map[string]*language
+	i18n             bool
 }
 
 const (
@@ -34,6 +36,7 @@ func New(config ...*Config) *App {
 	app := &App{
 		config:      cfg,
 		controllers: make(map[string]*appController),
+		languages:   make(map[string]*language),
 		modules:     make(map[string]*appModule),
 		services:    make(map[string]*appService),
 	}
@@ -42,6 +45,16 @@ func New(config ...*Config) *App {
 	app.moduleBuilder = newModuleBuilder(app)
 	app.linksManager = newLinksManager(app)
 	return app
+}
+
+func (a *App) I18N() {
+	a.i18n = true
+}
+
+func (a *App) Language(code string, main ...bool) Language {
+	lang := newLanguage(code, main...)
+	a.languages[code] = lang
+	return lang
 }
 
 func (a *App) Templates() TemplatesManager {

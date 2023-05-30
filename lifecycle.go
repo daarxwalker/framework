@@ -67,7 +67,7 @@ func (l *lifecycle) createNamespace() {
 }
 
 func (l *lifecycle) createControl() {
-	l.control = newControl(l.ctx, l.controller, l.module)
+	l.control = newControl(l.app, l.ctx, l.controller, l.module)
 }
 
 func (l *lifecycle) callRenderMethod() {

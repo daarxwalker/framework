@@ -6,6 +6,8 @@ import (
 
 type BaseControl interface {
 	Root() string
+	CurrentLang() string
+	Languages() []Language
 }
 
 type ComponentControl interface {
@@ -31,19 +33,35 @@ type ControllerControl interface {
 }
 
 type control struct {
+	app        *App
 	ctx        *fiber.Ctx
 	response   *response
 	controller *appController
 	module     string
 }
 
-func newControl(ctx *fiber.Ctx, controller *appController, module string) *control {
+func newControl(app *App, ctx *fiber.Ctx, controller *appController, module string) *control {
 	return &control{
+		app:        app,
 		ctx:        ctx,
 		response:   new(response),
 		controller: controller,
 		module:     module,
 	}
+}
+
+func (c *control) CurrentLang() string {
+	return c.ctx.Params(langParam)
+}
+
+func (c *control) Languages() []Language {
+	result := make([]Language, len(c.app.languages))
+	i := 0
+	for _, l := range c.app.languages {
+		result[i] = l
+		i++
+	}
+	return result
 }
 
 func (c *control) Root() string {

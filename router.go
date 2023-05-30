@@ -18,6 +18,7 @@ type Router struct {
 const (
 	controllerRenderMethodPrefix = "Render"
 	controllerDefaultRouteName   = "default"
+	langParam                    = "lang"
 )
 
 func newRouter(app *App) *Router {
@@ -36,7 +37,9 @@ func (r *Router) Add(path string) *Route {
 }
 
 func (r *Router) build() {
+	r.registerMiddlewares()
 	r.buildControllers()
+	r.createWildcardRoute()
 }
 
 func (r *Router) buildControllers() {
@@ -69,7 +72,7 @@ func (r *Router) buildRoute(controller *appController, renderMethodName string) 
 	if route == nil {
 		return
 	}
-	r.fiber.Get(route.path, func(ctx *fiber.Ctx) error {
+	r.fiber.Get(r.modifyRoutePath(route.path), func(ctx *fiber.Ctx) error {
 		l := newLifecycle(r.app, controller, ctx, renderMethodName, route.module)
 		l.route()
 		l.run()
@@ -82,11 +85,17 @@ func (r *Router) buildActions(controller *appController, renderMethodName string
 	if route == nil {
 		return
 	}
-	r.fiber.Post(route.path, func(ctx *fiber.Ctx) error {
+	r.fiber.Post(r.modifyRoutePath(route.path), func(ctx *fiber.Ctx) error {
 		l := newLifecycle(r.app, controller, ctx, renderMethodName, route.module)
 		l.action()
 		l.run()
 		return r.buildResponse(ctx, l.control.response)
+	})
+}
+
+func (r *Router) createWildcardRoute() {
+	r.fiber.Get("*", func(ctx *fiber.Ctx) error {
+		return ctx.Status(fiber.StatusNotFound).SendString("not found")
 	})
 }
 
@@ -122,4 +131,23 @@ func (r *Router) getRoute(methodName string) *Route {
 		resolvedRoute = route
 	}
 	return resolvedRoute
+}
+
+func (r *Router) modifyRoutePath(path string) string {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	if !r.app.i18n {
+		return path
+	}
+	path = "/:" + langParam + path
+	return path
+}
+
+func (r *Router) registerMiddlewares() {
+	if r.app.i18n {
+		r.fiber.Use("*", middlewareI18nAddLangUrlPrefix(r.app))
+		r.fiber.Use("/:"+langParam+"/*", middlewareI18nKnownLangs(r.app))
+	}
+	r.fiber.Use(middlewareSlash())
 }
