@@ -70,6 +70,14 @@ func (l *lifecycle) createControl() {
 	l.control = newControl(l.app, l.ctx, l.controller, l.module)
 }
 
+func (l *lifecycle) callInitMethod() {
+	method := l.controller.provider.reflectValue.MethodByName(initMethod)
+	if !method.IsValid() {
+		return
+	}
+	method.Call([]reflect.Value{})
+}
+
 func (l *lifecycle) callRenderMethod() {
 	method := l.controller.provider.reflectValue.MethodByName(l.renderMethodName)
 	if !method.IsValid() {
@@ -118,6 +126,7 @@ func (l *lifecycle) beforeInject() {
 }
 
 func (l *lifecycle) beforeRender() {
+	l.callInitMethod()
 	l.processComponents()
 	l.callActionMethod()
 }
@@ -127,7 +136,7 @@ func (l *lifecycle) render() {
 		return
 	}
 	l.callRenderMethod()
-	rm := newRenderManager(l.app, l.controller, l.control.response.template, l.templateComponents)
+	rm := newRenderManager(l.app, l.control, l.controller, l.control.response.template, l.templateComponents)
 	rm.render()
 	if !rm.isOk() {
 		l.control.response.setStatus(fiber.StatusInternalServerError).setError(rm.error)

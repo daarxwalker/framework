@@ -18,7 +18,6 @@ type componentLifecycle struct {
 }
 
 const (
-	componentInitMethod   = "Init"
 	componentHandleMethod = "Handle"
 	componentCreateMethod = "Create"
 	componentRenderMethod = "Render"
@@ -44,7 +43,7 @@ func (l *componentLifecycle) run() *componentLifecycle {
 }
 
 func (l *componentLifecycle) runInitMethod() {
-	initMethod := l.component.MethodByName(componentInitMethod)
+	initMethod := l.component.MethodByName(initMethod)
 	if !initMethod.IsValid() {
 		return
 	}

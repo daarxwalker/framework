@@ -145,6 +145,7 @@ func (r *Router) modifyRoutePath(path string) string {
 }
 
 func (r *Router) registerMiddlewares() {
+	r.fiber.Use(middlewareError(r.app))
 	if r.app.i18n {
 		r.fiber.Use("*", middlewareI18nAddLangUrlPrefix(r.app))
 		r.fiber.Use("/:"+langParam+"/*", middlewareI18nKnownLangs(r.app))

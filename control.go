@@ -5,9 +5,9 @@ import (
 )
 
 type BaseControl interface {
-	Root() string
 	CurrentLang() string
 	Languages() []Language
+	Root() string
 }
 
 type ComponentControl interface {
@@ -16,20 +16,13 @@ type ComponentControl interface {
 	Redirect(path string)
 }
 
-type RouteControl interface {
-	BaseControl
-	Text(value string)
-	Template(template string)
-	JSON(value any)
-	Redirect(path string)
-}
-
 type ControllerControl interface {
 	BaseControl
-	Text(value string)
-	Template(template string)
 	JSON(value any)
+	Meta() Meta
 	Redirect(path string)
+	Template(template string)
+	Text(value string)
 }
 
 type control struct {
@@ -37,21 +30,43 @@ type control struct {
 	ctx        *fiber.Ctx
 	response   *response
 	controller *appController
+	meta       *metaManager
 	module     string
+	layout     string
 }
 
 func newControl(app *App, ctx *fiber.Ctx, controller *appController, module string) *control {
-	return &control{
+	c := &control{
 		app:        app,
 		ctx:        ctx,
 		response:   new(response),
+		meta:       new(metaManager),
 		controller: controller,
 		module:     module,
+		layout:     "default",
 	}
+	return c
 }
 
 func (c *control) CurrentLang() string {
 	return c.ctx.Params(langParam)
+}
+
+func (c *control) Error() Error {
+	return newErrorManager(c)
+}
+
+func (c *control) Form(form *Form) {
+	for _, field := range form.fields {
+		field.value = c.ctx.FormValue(field.name, "")
+	}
+}
+
+func (c *control) JSON(value any) {
+	c.response = &response{
+		responseType: responseJson,
+		json:         value,
+	}
 }
 
 func (c *control) Languages() []Language {
@@ -64,19 +79,20 @@ func (c *control) Languages() []Language {
 	return result
 }
 
-func (c *control) Root() string {
-	return root()
+func (c *control) Meta() Meta {
+	return c.meta
 }
 
 func (c *control) Path() string {
 	return c.ctx.Route().Path
 }
 
-func (c *control) Text(value string) {
-	c.response = &response{
-		responseType: responseText,
-		text:         value,
-	}
+func (c *control) Redirect(path string) {
+	c.response.setType(responseRedirect).setRedirect(path)
+}
+
+func (c *control) Root() string {
+	return root()
 }
 
 func (c *control) Template(path string) {
@@ -86,19 +102,9 @@ func (c *control) Template(path string) {
 	}
 }
 
-func (c *control) JSON(value any) {
+func (c *control) Text(value string) {
 	c.response = &response{
-		responseType: responseJson,
-		json:         value,
+		responseType: responseText,
+		text:         value,
 	}
-}
-
-func (c *control) Form(form *Form) {
-	for _, field := range form.fields {
-		field.value = c.ctx.FormValue(field.name, "")
-	}
-}
-
-func (c *control) Redirect(path string) {
-	c.response.setType(responseRedirect).setRedirect(path)
 }

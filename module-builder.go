@@ -9,7 +9,6 @@ type moduleBuilder struct {
 }
 
 const (
-	moduleInitMethod        = "Init"
 	moduleControllersMethod = "Controllers"
 	moduleServicesMethod    = "Services"
 	moduleRoutesMethod      = "Routes"
@@ -47,7 +46,7 @@ func (b *moduleBuilder) injectModule(module *appModule) {
 }
 
 func (b *moduleBuilder) runMethods(module *appModule) {
-	b.runMethod(module, moduleInitMethod)
+	b.runMethod(module, initMethod)
 	b.runMethod(module, moduleControllersMethod)
 	b.runMethod(module, moduleServicesMethod)
 	b.runMethod(module, moduleRoutesMethod)

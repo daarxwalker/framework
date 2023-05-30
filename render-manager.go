@@ -12,6 +12,7 @@ import (
 
 type renderManager struct {
 	app         *App
+	control     *control
 	controller  *appController
 	template    string
 	error       error
@@ -25,9 +26,10 @@ const (
 	slotTag = "<slot/>"
 )
 
-func newRenderManager(app *App, controller *appController, template string, components map[string]reflect.Value) *renderManager {
+func newRenderManager(app *App, control *control, controller *appController, template string, components map[string]reflect.Value) *renderManager {
 	return &renderManager{
 		app:         app,
+		control:     control,
 		controller:  controller,
 		template:    template,
 		components:  components,
@@ -36,12 +38,21 @@ func newRenderManager(app *App, controller *appController, template string, comp
 }
 
 func (m *renderManager) render() {
-	m.includeControllerContext()
+	m.includeData()
 	m.renderComponents()
 	m.renderTemplate()
 }
 
-func (m *renderManager) includeControllerContext() {
+func (m *renderManager) includeData() {
+	m.includeMeta()
+	m.includeController()
+}
+
+func (m *renderManager) includeMeta() {
+	m.contextData["meta"] = m.control.meta.getMap()
+}
+
+func (m *renderManager) includeController() {
 	m.contextData["controller"] = m.controller.provider.reflectValue
 }
 

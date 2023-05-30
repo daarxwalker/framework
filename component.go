@@ -2,6 +2,7 @@ package framework
 
 type Component struct {
 	Control  ComponentControl
+	Error    func() Error
 	Handle   map[string]string
 	template string
 	name     string

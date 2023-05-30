@@ -74,14 +74,15 @@ func (i *injector) createNewInstance(dst reflect.Value) {
 }
 
 func (i *injector) injectController(dst reflect.Value) {
-	dst.Set(reflect.ValueOf(&Controller{Control: i.control}))
+	dst.Set(reflect.ValueOf(&Controller{Control: i.control, Error: i.control.Error}))
 }
 
 func (i *injector) injectComponent(dst reflect.Value, dstType reflect.StructField) {
 	c := &Component{
 		Control: i.control,
-		control: i.control,
+		Error:   i.control.Error,
 		Handle:  make(map[string]string),
+		control: i.control,
 		name:    strcase.ToKebab(dstType.Name),
 	}
 	dst.Elem().FieldByName(componentType.Name()).Set(
