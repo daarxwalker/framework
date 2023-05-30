@@ -127,7 +127,7 @@ func (l *lifecycle) render() {
 		return
 	}
 	l.callRenderMethod()
-	rm := newRenderManager(l.app, l.controller, l.control.response.template, templateRoute, l.templateComponents)
+	rm := newRenderManager(l.app, l.controller, l.control.response.template, l.templateComponents)
 	rm.render()
 	if !rm.isOk() {
 		l.control.response.setStatus(fiber.StatusInternalServerError).setError(rm.error)

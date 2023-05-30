@@ -64,7 +64,7 @@ func (c *control) Text(value string) {
 func (c *control) Template(path string) {
 	c.response = &response{
 		responseType: responseTemplate,
-		template:     newTemplatePath(path, templateSourceController, c.controller.name),
+		template:     path,
 	}
 }
 

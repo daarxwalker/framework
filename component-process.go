@@ -15,6 +15,10 @@ type componentProcess struct {
 	actionMethod  reflect.Value
 }
 
+const (
+	componentTypeNameSuffix = "_component"
+)
+
 func (cp *componentProcess) prepare() {
 	cp.createNamespace()
 }
@@ -100,8 +104,8 @@ func (cp *componentProcess) getFullname() string {
 	if name.Kind() == reflect.Ptr {
 		name = name.Elem()
 	}
-	if strings.Contains(name.String(), templateComponentPathSuffix) {
-		result = name.String()[:strings.Index(name.String(), templateComponentPathSuffix)]
+	if strings.Contains(name.String(), componentTypeNameSuffix) {
+		result = name.String()[:strings.Index(name.String(), componentTypeNameSuffix)]
 	}
 	return result
 }

@@ -5,7 +5,7 @@ type response struct {
 	bytes        []byte
 	json         any
 	text         string
-	template     templatePath
+	template     string
 	html         string
 	error        error
 	status       int

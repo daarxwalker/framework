@@ -11,172 +11,99 @@ import (
 )
 
 type TemplatesManager interface {
-	GlobalPath(path string)
+	Path(path string)
 }
 
 type templatesManager struct {
-	app        *App
-	globalPath string
-	root       string
-	partials   map[string]string
-	layouts    map[string]*raymond.Template
-	components map[string]*raymond.Template
-	routes     map[string]*raymond.Template
+	app       *App
+	path      string
+	root      string
+	partials  map[string]string
+	layouts   map[string]*raymond.Template
+	templates map[string]*raymond.Template
 }
 
 const (
-	templateControllerPathSuffix = "_controller"
-	templateComponentPathSuffix  = "_component"
-	templateModulePathSuffix     = "_module"
-	templateFileTypeSuffix       = ".hbs"
+	templateFileTypeSuffix = ".hbs"
 )
 
 var (
-	templateComponent = "component"
-	templateLayout    = "layout"
-	templatePartial   = "partial"
-	templateRoute     = "route"
-	templateGlobal    = "global"
+	templateLayout  = "layout"
+	templatePartial = "partial"
 )
 
 var (
-	templateComponentSuffix = "." + templateComponent + templateFileTypeSuffix
-	templateLayoutSuffix    = "." + templateLayout + templateFileTypeSuffix
-	templatePartialSuffix   = "." + templatePartial + templateFileTypeSuffix
-	templateRouteSuffix     = "." + templateRoute + templateFileTypeSuffix
+	templatePartialSuffix = "." + templatePartial + templateFileTypeSuffix
+	templateLayoutSuffix  = "." + templateLayout + templateFileTypeSuffix
 )
 
 func newTemplatesManager(app *App) *templatesManager {
 	return &templatesManager{
-		app:        app,
-		partials:   make(map[string]string),
-		layouts:    make(map[string]*raymond.Template),
-		components: make(map[string]*raymond.Template),
-		routes:     make(map[string]*raymond.Template),
-		root:       root(),
+		app:       app,
+		partials:  make(map[string]string),
+		layouts:   make(map[string]*raymond.Template),
+		templates: make(map[string]*raymond.Template),
+		root:      root(),
 	}
 }
 
-func (t *templatesManager) GlobalPath(path string) {
-	t.globalPath = path
+func (t *templatesManager) Path(path string) {
+	t.path = path
 }
 
 func (t *templatesManager) parse() {
 	t.registerHelpers()
-	t.parseTemplates(moduleRootDir)
-	t.parseTemplates(t.globalPath)
+	t.parseTemplates()
 }
 
-func (t *templatesManager) parseTemplates(dir string) {
-	check(filepath.Walk(t.root+dir, func(path string, info fs.FileInfo, err error) error {
+func (t *templatesManager) parseTemplates() {
+	check(filepath.Walk(t.root+t.path, func(path string, info fs.FileInfo, err error) error {
 		if !strings.HasSuffix(path, templateFileTypeSuffix) {
 			return nil
 		}
 		switch {
-		case strings.HasSuffix(path, templateComponentSuffix):
-			t.parseTemplate(path, templateComponent)
-		case strings.HasSuffix(path, templateLayoutSuffix):
-			t.parseTemplate(path, templateLayout)
 		case strings.HasSuffix(path, templatePartialSuffix):
 			t.parseTemplate(path, templatePartial)
-		case strings.HasSuffix(path, templateRouteSuffix):
-			t.parseTemplate(path, templateRoute)
+		case strings.HasSuffix(path, templateLayoutSuffix):
+			t.parseTemplate(path, templateLayout)
+		default:
+			t.parseTemplate(path, "")
 		}
 		return nil
 	}))
 }
 
-func (t *templatesManager) parseTemplate(path, templateType string) {
+func (t *templatesManager) parseTemplate(path string, templateType string) {
+	key := t.getTemplateKey(path, templateType)
 	content, err := os.ReadFile(path)
 	check(err)
 	if templateType == templatePartial {
-		t.partials[t.getTemplateKey(path, templateType)] = string(content)
+		t.partials[key] = string(content)
 		return
 	}
 	tmpl, err := raymond.Parse(string(content))
 	check(err)
-	switch templateType {
-	case templateComponent:
-		t.components[t.getTemplateKey(path, templateType)] = tmpl
-	case templateLayout:
-		t.layouts[t.getTemplateKey(path, templateType)] = tmpl
-	case templateRoute:
-		t.routes[t.getTemplateKey(path, templateType)] = tmpl
+	if templateType == templateLayout {
+		t.layouts[key] = tmpl
+		return
 	}
+	t.templates[key] = tmpl
 }
 
-func (t *templatesManager) getTemplateKey(path, templateType string) string {
-	var namespace, name string
-	// Namespace
-	isModuleChild := strings.Contains(path, templateModulePathSuffix)
-	isControllerChild := strings.Contains(path, templateControllerPathSuffix)
-	isComponentChild := strings.Contains(path, templateComponentPathSuffix)
-	if isControllerChild {
-		namespace = t.getControllerName(path)
-	}
-	if isComponentChild {
-		namespace = t.getComponentName(path)
-	}
-	if isModuleChild && !isControllerChild && !isComponentChild {
-		namespace = t.getModuleName(path)
-	}
-	// Name
-	pathParts := strings.Split(path, "/")
-	name = pathParts[len(pathParts)-1]
+func (t *templatesManager) getTemplateKey(path string, templateType string) string {
+	var suffix string
 	switch templateType {
-	case templateComponent:
-		name = strings.TrimSuffix(name, templateComponentSuffix)
-	case templateLayout:
-		name = strings.TrimSuffix(name, templateLayoutSuffix)
 	case templatePartial:
-		name = strings.TrimSuffix(name, templatePartialSuffix)
-	case templateRoute:
-		name = strings.TrimSuffix(name, templateRouteSuffix)
+		suffix = templatePartialSuffix
+	case templateLayout:
+		suffix = templateLayoutSuffix
+	default:
+		suffix = templateFileTypeSuffix
 	}
-	if len(namespace) == 0 {
-		return fmt.Sprintf("%s:%s", templateGlobal, name)
-	}
-	key := fmt.Sprintf("%s:%s", namespace, name)
-	if templateType != templateRoute {
-		return key
-	}
-	if isModuleChild && !isControllerChild {
-		key = templateSourceModule + templatePathSeparator + key
-	}
-	if isControllerChild {
-		key = templateSourceController + templatePathSeparator + key
-	}
-	return key
-}
-
-func (t *templatesManager) getControllerName(path string) (result string) {
-	parts := strings.Split(path, "/")
-	for _, part := range parts {
-		if strings.HasSuffix(part, templateControllerPathSuffix) {
-			return strings.TrimSuffix(part, templateControllerPathSuffix)
-		}
-	}
-	return result
-}
-
-func (t *templatesManager) getComponentName(path string) (result string) {
-	parts := strings.Split(path, "/")
-	for _, part := range parts {
-		if strings.HasSuffix(part, templateComponentPathSuffix) {
-			return strings.TrimSuffix(part, templateComponentPathSuffix)
-		}
-	}
-	return result
-}
-
-func (t *templatesManager) getModuleName(path string) (result string) {
-	parts := strings.Split(path, "/")
-	for _, part := range parts {
-		if strings.HasSuffix(part, templateModulePathSuffix) {
-			return strings.TrimSuffix(part, templateModulePathSuffix)
-		}
-	}
-	return result
+	path = strings.TrimPrefix(path, t.root+t.path)
+	path = strings.TrimSuffix(path, suffix)
+	path = strings.TrimPrefix(path, "/")
+	return path
 }
 
 func (t *templatesManager) registerHelpers() {
