@@ -1,10 +1,13 @@
 package framework
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+
+	"dd"
 )
 
 type lifecycle struct {
@@ -16,6 +19,7 @@ type lifecycle struct {
 	ctx                *fiber.Ctx
 	templateComponents map[string]reflect.Value
 	renderMethodName   string
+	guard              string
 	module             string
 	lifecycleType      string
 	actionName         string
@@ -28,11 +32,12 @@ const (
 	queryAction     = "action"
 )
 
-func newLifecycle(app *App, controller *appController, ctx *fiber.Ctx, renderMethodName, module string) *lifecycle {
+func newLifecycle(app *App, controller *appController, ctx *fiber.Ctx, renderMethodName string, route *Route) *lifecycle {
 	l := &lifecycle{
 		app:                app,
 		renderMethodName:   renderMethodName,
-		module:             module,
+		module:             route.module,
+		guard:              route.guard,
 		ctx:                ctx,
 		actionName:         ctx.Query(queryAction, ""),
 		templateComponents: make(map[string]reflect.Value),
@@ -51,6 +56,10 @@ func (l *lifecycle) action() {
 
 func (l *lifecycle) run() {
 	l.beforeInject()
+	dd.Print(l.validateGuard())
+	if ok := l.validateGuard(); !ok {
+		return
+	}
 	l.autoinject()
 	l.beforeRender()
 	l.render()
@@ -154,4 +163,16 @@ func (l *lifecycle) verifyAction() bool {
 
 func (l *lifecycle) createActionPath() []string {
 	return strings.Split(l.actionName, "-")
+}
+
+func (l *lifecycle) validateGuard() bool {
+	if len(l.guard) == 0 {
+		return true
+	}
+	guard, ok := l.app.guards[l.guard]
+	if !ok {
+		l.control.response.setStatus(fiber.StatusForbidden).setError(errors.New("unknown guard - prevently forbidden"))
+		return false
+	}
+	return guard.handler(l.control)
 }

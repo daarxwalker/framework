@@ -9,6 +9,7 @@ type Route struct {
 	method           reflect.Value
 	module           string
 	isModule         bool
+	guard            string
 }
 
 func (r *Route) Controller(name string) *Route {
@@ -18,5 +19,14 @@ func (r *Route) Controller(name string) *Route {
 
 func (r *Route) Method(name string) *Route {
 	r.controllerMethod = name
+	return r
+}
+
+func (r *Route) Guard(name ...string) *Route {
+	guardName := guardDefault
+	if len(name) > 0 {
+		guardName = name[0]
+	}
+	r.guard = guardName
 	return r
 }

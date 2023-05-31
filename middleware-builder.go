@@ -2,8 +2,6 @@ package framework
 
 import (
 	"strings"
-
-	"dd"
 )
 
 type MiddlewareBuilder struct {
@@ -22,7 +20,6 @@ func CreateMiddleware(name string, app *App, ctx *Ctx) *MiddlewareBuilder {
 		ctx:  ctx,
 	}
 	b.prepare()
-	dd.Print(b)
 	return b
 }
 

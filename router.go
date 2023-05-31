@@ -13,6 +13,7 @@ type Router struct {
 	routes     []*Route
 	module     bool
 	moduleName string
+	basePath   string
 }
 
 const (
@@ -30,8 +31,16 @@ func newRouter(app *App) *Router {
 	}
 }
 
+func (r *Router) Group(path string) *Router {
+	return &Router{
+		fiber:    r.fiber,
+		app:      r.app,
+		basePath: path,
+	}
+}
+
 func (r *Router) Add(path string) *Route {
-	rr := &Route{path: path, module: r.moduleName, isModule: len(r.moduleName) > 0}
+	rr := &Route{path: r.basePath + path, module: r.moduleName, isModule: len(r.moduleName) > 0}
 	r.routes = append(r.routes, rr)
 	return rr
 }
@@ -73,7 +82,7 @@ func (r *Router) buildRoute(controller *appController, renderMethodName string) 
 		return
 	}
 	r.fiber.Get(r.modifyRoutePath(route.path), func(ctx *fiber.Ctx) error {
-		l := newLifecycle(r.app, controller, ctx, renderMethodName, route.module)
+		l := newLifecycle(r.app, controller, ctx, renderMethodName, route)
 		l.route()
 		l.run()
 		return r.buildResponse(ctx, l.control.response)
@@ -86,7 +95,7 @@ func (r *Router) buildActions(controller *appController, renderMethodName string
 		return
 	}
 	r.fiber.Post(r.modifyRoutePath(route.path), func(ctx *fiber.Ctx) error {
-		l := newLifecycle(r.app, controller, ctx, renderMethodName, route.module)
+		l := newLifecycle(r.app, controller, ctx, renderMethodName, route)
 		l.action()
 		l.run()
 		return r.buildResponse(ctx, l.control.response)

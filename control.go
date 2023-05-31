@@ -10,6 +10,10 @@ type BaseControl interface {
 	Root() string
 }
 
+type GuardControl interface {
+	BaseControl
+}
+
 type ComponentControl interface {
 	BaseControl
 	Form(form *Form)

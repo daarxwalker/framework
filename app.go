@@ -13,6 +13,7 @@ import (
 type App struct {
 	config           *Config
 	controllers      map[string]*appController
+	guards           map[string]*guard
 	i18n             bool
 	languages        map[string]*language
 	linksManager     *linksManager
@@ -36,6 +37,7 @@ func New(config ...*Config) *App {
 	app := &App{
 		config:      cfg,
 		controllers: make(map[string]*appController),
+		guards:      make(map[string]*guard),
 		languages:   make(map[string]*language),
 		modules:     make(map[string]*appModule),
 		services:    make(map[string]*appService),
@@ -58,6 +60,15 @@ func (a *App) Fly() {
 		log.Fatalln(err)
 	}
 	log.Fatalln(a.router.fiber.Listen(fmt.Sprintf(":%d", a.config.Port)))
+}
+
+func (a *App) Guard(name ...string) Guard {
+	n := guardDefault
+	if len(name) > 0 {
+		n = name[0]
+	}
+	a.guards[n] = &guard{name: n}
+	return a.guards[n]
 }
 
 func (a *App) I18N() {
