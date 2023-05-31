@@ -47,7 +47,11 @@ func (l *componentLifecycle) createActions() {
 }
 
 func (l *componentLifecycle) createActionUrl(actionName string) string {
-	return fmt.Sprintf("%s?action=%s", l.control.Path(), actionName)
+	path := l.control.Path()
+	if l.control.app.i18n {
+		path = strings.Replace(path, ":"+langParam, l.control.LangCode(), -1)
+	}
+	return fmt.Sprintf("%s?action=%s", path, actionName)
 }
 
 func (l *componentLifecycle) run() *componentLifecycle {

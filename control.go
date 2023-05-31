@@ -5,7 +5,7 @@ import (
 )
 
 type BaseControl interface {
-	CurrentLang() string
+	LangCode() string
 	Languages() []Language
 	Root() string
 }
@@ -48,8 +48,19 @@ func newControl(app *App, ctx *fiber.Ctx, controller *appController, module stri
 	return c
 }
 
-func (c *control) CurrentLang() string {
-	return c.ctx.Params(langParam)
+func (c *control) LangCode() string {
+	if !c.app.i18n {
+		return ""
+	}
+	langCode := c.ctx.Params(langParam)
+	langCodeLen := len(langCode)
+	if langCodeLen != 0 {
+		return langCode
+	}
+	if langCodeLen == 0 && len(c.Path()) > 3 {
+		langCode = c.ctx.Path()[1:3]
+	}
+	return langCode
 }
 
 func (c *control) Error() Error {
