@@ -19,6 +19,27 @@ const (
 	componentTypeNameSuffix = "_component"
 )
 
+func (cp *componentProcess) createNamespace() {
+	cp.namespace.set(cp.typeComponent.Name)
+	cp.namespace = cp.namespace.clone()
+}
+
+func (cp *componentProcess) getFullname() string {
+	var result string
+	name := cp.component.Type()
+	if name.Kind() == reflect.Ptr {
+		name = name.Elem()
+	}
+	if strings.Contains(name.String(), componentTypeNameSuffix) {
+		result = name.String()[:strings.Index(name.String(), componentTypeNameSuffix)]
+	}
+	return result
+}
+
+func (cp *componentProcess) getKind() reflect.Kind {
+	return cp.component.Type().Kind()
+}
+
 func (cp *componentProcess) prepare() {
 	cp.createNamespace()
 }
@@ -53,28 +74,11 @@ func (cp *componentProcess) setActionMethod() {
 	cp.actionMethod = cp.component.MethodByName(methodName)
 }
 
-func (cp *componentProcess) createNamespace() {
-	cp.namespace.set(cp.typeComponent.Name)
-	cp.namespace = cp.namespace.clone()
-}
-
 func (cp *componentProcess) shouldActionProcessRun() bool {
 	if cp.processType == processRoute {
 		return true
 	}
 	return cp.verifyActionNamespace()
-}
-
-func (cp *componentProcess) verifyActionNamespace() bool {
-	if len(cp.namespace.names) > len(cp.actionPath) {
-		return false
-	}
-	for i, item := range cp.namespace.names {
-		if item != cp.actionPath[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (cp *componentProcess) shouldProcess() bool {
@@ -94,18 +98,14 @@ func (cp *componentProcess) shouldProcess() bool {
 	return true
 }
 
-func (cp *componentProcess) getKind() reflect.Kind {
-	return cp.component.Type().Kind()
-}
-
-func (cp *componentProcess) getFullname() string {
-	var result string
-	name := cp.component.Type()
-	if name.Kind() == reflect.Ptr {
-		name = name.Elem()
+func (cp *componentProcess) verifyActionNamespace() bool {
+	if len(cp.namespace.names) > len(cp.actionPath) {
+		return false
 	}
-	if strings.Contains(name.String(), componentTypeNameSuffix) {
-		result = name.String()[:strings.Index(name.String(), componentTypeNameSuffix)]
+	for i, item := range cp.namespace.names {
+		if item != cp.actionPath[i] {
+			return false
+		}
 	}
-	return result
+	return true
 }

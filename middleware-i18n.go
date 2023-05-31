@@ -6,49 +6,39 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func middlewareI18nKnownLangs(app *App) fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
+func middlewareI18nVerifyLang(app *App) MiddlewareHandler {
+	return func(ctx *Ctx) error {
+		m := CreateMiddleware("verify-lang", app, ctx)
 		if !app.i18n {
-			return ctx.Next()
+			return m.Next()
 		}
-		lang := ctx.Params(langParam)
-		if _, ok := app.languages[lang]; !ok {
-			for _, l := range app.languages {
-				if l.main {
-					return ctx.Redirect(strings.Replace(ctx.Path(), lang, l.code, -1))
-				}
-			}
+		if _, ok := m.Language(); ok {
+			return m.Next()
 		}
-		return ctx.Next()
+		l, ok := m.MainLanguage()
+		if !ok {
+			return m.Next()
+		}
+		return m.Redirect(strings.Replace(m.path, m.LangCode(), l.Code(), -1))
 	}
 }
 
-func middlewareI18nAddLangUrlPrefix(app *App) fiber.Handler {
+func middlewareI18nMissingLang(app *App) MiddlewareHandler {
 	return func(ctx *fiber.Ctx) error {
+		m := CreateMiddleware("missing-lang", app, ctx)
 		if !app.i18n {
-			return ctx.Next()
+			return m.Next()
 		}
-		var valid bool
-		var mainLang *language
-		for code, l := range app.languages {
-			if l.main {
-				mainLang = l
-			}
-			if strings.HasPrefix(ctx.Path(), "/"+code+"/") {
-				valid = true
-			}
+		ml, ok := m.MainLanguage()
+		if !ok {
+			return m.Next()
 		}
-		if valid {
-			return ctx.Next()
+		if !m.LangExist() {
+			return m.Redirect("/" + ml.Code() + m.path)
 		}
-		if mainLang == nil {
-			return ctx.Next()
+		if !m.IsLangValid() {
+			return m.Redirect(strings.Replace(m.path, "/"+m.LangCode()+"/", "/"+ml.Code()+"/", -1))
 		}
-		path := ctx.Path()
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
-		path = "/" + mainLang.code + path
-		return ctx.Redirect(path)
+		return m.Next()
 	}
 }

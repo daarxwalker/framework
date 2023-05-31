@@ -1,6 +1,8 @@
 package framework
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type reflectProvider struct {
 	reflectType  reflect.Type

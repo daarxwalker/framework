@@ -1,9 +1,15 @@
 package framework
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"strings"
+)
 
-func middlewareSlash() fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
-		return ctx.Next()
+func middlewareSlash(app *App) MiddlewareHandler {
+	return func(ctx *Ctx) error {
+		m := CreateMiddleware("slash", app, ctx)
+		if !strings.HasSuffix(m.path, "/") {
+			return m.Redirect(m.path + "/")
+		}
+		return m.Next()
 	}
 }

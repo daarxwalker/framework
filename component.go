@@ -1,12 +1,13 @@
 package framework
 
 type Component struct {
-	Control  ComponentControl
-	Error    func() Error
-	Handle   map[string]string
-	template string
-	name     string
+	Control ComponentControl
+	Error   func() Error
+	Handle  map[string]string
+
 	control  *control
+	name     string
+	template string
 }
 
 func (c *Component) Template(path string) {

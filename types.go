@@ -1,6 +1,13 @@
 package framework
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+type Ctx = fiber.Ctx
+type MiddlewareHandler = fiber.Handler
 
 var (
 	componentType  = reflect.TypeOf(Component{})

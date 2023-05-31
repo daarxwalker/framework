@@ -13,14 +13,14 @@ import (
 type App struct {
 	config           *Config
 	controllers      map[string]*appController
-	router           *Router
-	moduleBuilder    *moduleBuilder
-	templatesManager *templatesManager
+	i18n             bool
+	languages        map[string]*language
 	linksManager     *linksManager
 	modules          map[string]*appModule
+	moduleBuilder    *moduleBuilder
+	router           *Router
 	services         map[string]*appService
-	languages        map[string]*language
-	i18n             bool
+	templatesManager *templatesManager
 }
 
 const (
@@ -47,6 +47,19 @@ func New(config ...*Config) *App {
 	return app
 }
 
+func (a *App) Controller(controller any) {
+	a.controller(controller, "")
+}
+
+func (a *App) Fly() {
+	a.beforeFly()
+	greenBg := color.New(color.BgGreen)
+	if _, err := greenBg.Println(fmt.Sprintf("Flying on host: [localhost:%d]", a.config.Port)); err != nil {
+		log.Fatalln(err)
+	}
+	log.Fatalln(a.router.fiber.Listen(fmt.Sprintf(":%d", a.config.Port)))
+}
+
 func (a *App) I18N() {
 	a.i18n = true
 }
@@ -55,10 +68,6 @@ func (a *App) Language(code string, main ...bool) Language {
 	lang := newLanguage(code, main...)
 	a.languages[code] = lang
 	return lang
-}
-
-func (a *App) Templates() TemplatesManager {
-	return a.templatesManager
 }
 
 func (a *App) Module(module any) *App {
@@ -78,27 +87,6 @@ func (a *App) Module(module any) *App {
 
 func (a *App) Router() *Router {
 	return a.router
-}
-
-func (a *App) Controller(controller any) {
-	a.controller(controller, "")
-}
-
-func (a *App) controller(controller any, module string) *App {
-	rp := &reflectProvider{
-		reflectType:  reflect.TypeOf(controller),
-		reflectValue: reflect.ValueOf(controller),
-	}
-	name := rp.reflectType.Elem().Name()
-	name = strings.Replace(name, controllerSuffix, "", -1)
-	name = strcase.ToLowerCamel(name)
-	a.controllers[name] = &appController{
-		provider: rp,
-		name:     name,
-		module:   module,
-		isModule: len(module) > 0,
-	}
-	return a
 }
 
 func (a *App) Service(service any, config ...*ServiceConfig) *App {
@@ -121,13 +109,9 @@ func (a *App) Service(service any, config ...*ServiceConfig) *App {
 	}
 	return a
 }
-func (a *App) Fly() {
-	a.beforeFly()
-	greenBg := color.New(color.BgGreen)
-	if _, err := greenBg.Println(fmt.Sprintf("Flying on host: [localhost:%d]", a.config.Port)); err != nil {
-		log.Fatalln(err)
-	}
-	log.Fatalln(a.router.fiber.Listen(fmt.Sprintf(":%d", a.config.Port)))
+
+func (a *App) Templates() TemplatesManager {
+	return a.templatesManager
 }
 
 func (a *App) beforeFly() {
@@ -135,6 +119,23 @@ func (a *App) beforeFly() {
 	a.moduleBuilder.build()
 	a.router.build()
 	a.linksManager.build()
+}
+
+func (a *App) controller(controller any, module string) *App {
+	rp := &reflectProvider{
+		reflectType:  reflect.TypeOf(controller),
+		reflectValue: reflect.ValueOf(controller),
+	}
+	name := rp.reflectType.Elem().Name()
+	name = strings.Replace(name, controllerSuffix, "", -1)
+	name = strcase.ToLowerCamel(name)
+	a.controllers[name] = &appController{
+		provider: rp,
+		name:     name,
+		module:   module,
+		isModule: len(module) > 0,
+	}
+	return a
 }
 
 func getAppDefaultConfig() *Config {

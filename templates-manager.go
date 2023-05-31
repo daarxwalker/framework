@@ -16,11 +16,11 @@ type TemplatesManager interface {
 
 type templatesManager struct {
 	app       *App
-	path      string
-	root      string
-	partials  map[string]string
 	errors    map[string]*raymond.Template
 	layouts   map[string]*raymond.Template
+	partials  map[string]string
+	path      string
+	root      string
 	templates map[string]*raymond.Template
 }
 

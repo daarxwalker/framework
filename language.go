@@ -1,7 +1,9 @@
 package framework
 
 type Language interface {
+	Code() string
 	Locale(key, value string, params ...map[string]any) Language
+	Main() bool
 }
 
 type language struct {
@@ -18,6 +20,10 @@ func newLanguage(code string, main ...bool) *language {
 	return l
 }
 
+func (l *language) Code() string {
+	return l.code
+}
+
 func (l *language) Locale(key, value string, params ...map[string]any) Language {
 	localeParams := make(map[string]any)
 	if len(params) > 0 {
@@ -29,4 +35,8 @@ func (l *language) Locale(key, value string, params ...map[string]any) Language 
 		params: localeParams,
 	}
 	return l
+}
+
+func (l *language) Main() bool {
+	return l.main
 }
